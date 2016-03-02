@@ -14,7 +14,7 @@
         var DeviceEnumeration = Windows.Devices.Enumeration;
         var displayRequest = new Windows.System.Display.DisplayRequest();
         var effectDefinition = new Windows.Media.Core.FaceDetectionEffectDefinition();
-        var mediaStreamType = Capture.MediaStreamType.videoRecord;
+        var mediaStreamType = Capture.MediaStreamType.videoPreview;
         var inPreview = false;
 
         function clearSnapshot() {
@@ -66,9 +66,9 @@
         }
 
         function mirrorPreview() {
-            var props = mediaCapture.videoDeviceController.getMediaStreamProperties(Capture.MediaStreamType.videoPreview);
+            var props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
             props.properties.insert("C380465D-2271-428C-9B83-ECEA3B4A85C1", 0);
-            return mediaCapture.setEncodingPropertiesAsync(Capture.MediaStreamType.videoPreview, props, null);
+            return mediaCapture.setEncodingPropertiesAsync(mediaStreamType, props, null);
         }
 
         function Uint8ToBase64(u8Arr) {
