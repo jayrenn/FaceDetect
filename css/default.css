@@ -1,0 +1,35 @@
+﻿body {
+    overflow-y: auto;
+}
+
+#video {
+    width: 640px;
+    height: 480px;
+    position: relative;
+}
+
+#cameraPreview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: 640px;
+    height: 480px;
+}
+
+#facesCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    width: 640px;
+    height: 480px;
+}
+
+#snapshot {
+    width: 640px;
+    text-align: center;
+    margin-top: 20px;
+    font-family: 'Segoe UI Light', Tahoma, sans-serif;
+    font-size: 24px;
+}
