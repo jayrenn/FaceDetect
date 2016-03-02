@@ -5,7 +5,6 @@
         // Configurations
         var detectionInterval = 33; // 33ms is fastest, 200ms is default
         var faceboxColors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"]; // Hex color values for each facebox; will cycle if there are more faceboxes than colors
-        var minConfidence = 0.75; // Minimum confidence level for successful face authentication, range from 0 to 1
         var mirroring = true; // If true, video preview will show you as you see yourself in the mirror
 
         // Initializations
