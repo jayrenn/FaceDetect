@@ -28,8 +28,5 @@
 
 #snapshot {
     width: 640px;
-    text-align: center;
     margin-top: 20px;
-    font-family: 'Segoe UI Light', Tahoma, sans-serif;
-    font-size: 24px;
 }
