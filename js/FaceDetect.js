@@ -109,7 +109,7 @@
                                     var availableProps = controller.getAvailableMediaStreamProperties(mediaStreamType);
                                     availableProps.forEach(function (prop, index) {
                                         if (prop.height == targetResolutionHeight && prop.frameRate.numerator == 30) {
-                                            controller.setMediaStreamPropertiesAsync(mediaStreamType, availableProps[index]);
+                                            controller.setMediaStreamPropertiesAsync(mediaStreamType, prop);
                                             return;
                                         }
                                     });
