@@ -3,12 +3,13 @@
 
     var FaceDetect = (function () {
         // Configurations
-        var detectionInterval = 33; // 33ms is fastest, 200ms is default
-        var faceboxColors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"]; // Hex color values for each facebox; will cycle if there are more faceboxes than colors
-        var mirroring = true; // If true, video preview will show you as you see yourself in the mirror
+        var detectionInterval = 33; // 33ms is fastest, 200ms is default.
+        var faceboxColors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"]; // Hex color values for each facebox; will cycle if there are more faceboxes than colors.
+        var mirroring = true; // If true, video preview will show you as you see yourself in the mirror.
+        var targetResolutionHeight = 480; // Height of target video resolution (e.g. 480, 720, 1080) at 30fps. Will fall back to device default if target setting not found.
 
         // Initializations
-        var buttonTakePhoto, mediaCapture, facesCanvas, video, snapshot, effect;
+        var buttonTakePhoto, mediaCapture, facesCanvas, video, snapshot, effect, props;
         var Capture = Windows.Media.Capture;
         var captureSettings = new Capture.MediaCaptureInitializationSettings;
         var DeviceEnumeration = Windows.Devices.Enumeration;
@@ -24,17 +25,9 @@
         }
 
         function findCameraDeviceByPanelAsync(panel) {
-            var deviceInfo;
             return DeviceEnumeration.DeviceInformation.findAllAsync(DeviceEnumeration.DeviceClass.videoCapture).then(
                 function (devices) {
-                    devices.forEach(function (cameraDeviceInfo) {
-                        if (cameraDeviceInfo.enclosureLocation != null && cameraDeviceInfo.enclosureLocation.panel === panel) {
-                            deviceInfo = cameraDeviceInfo;
-                            return;
-                        }
-                    });
-
-                    return !deviceInfo && devices.length > 0 ? devices.getAt(0) : deviceInfo;
+                    return devices.length > 0 ? devices.getAt(0) : null;
                 }
             );
         }
@@ -65,10 +58,11 @@
             }
         }
 
-        function mirrorPreview() {
-            var props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
-            props.properties.insert("C380465D-2271-428C-9B83-ECEA3B4A85C1", 0);
-            return mediaCapture.setEncodingPropertiesAsync(mediaStreamType, props, null);
+        function handlePreview() {
+            if (mirroring) {
+                props.properties.insert("C380465D-2271-428C-9B83-ECEA3B4A85C1", 0);
+                return mediaCapture.setEncodingPropertiesAsync(mediaStreamType, props, null);
+            }
         }
 
         function Uint8ToBase64(u8Arr) {
@@ -99,9 +93,6 @@
                     snapshot = document.getElementById("snapshot");
                     video = document.getElementById("video");
 
-                    facesCanvas.width = video.offsetWidth;
-                    facesCanvas.height = video.offsetHeight;
-
                     findCameraDeviceByPanelAsync(DeviceEnumeration.Panel.back).then(
                         function (camera) {
                             if (!camera) {
@@ -114,6 +105,17 @@
                             captureSettings.streamingCaptureMode = Capture.StreamingCaptureMode.video;
                             mediaCapture.initializeAsync(captureSettings).then(
                                 function fulfilled(result) {
+                                    var controller = mediaCapture.videoDeviceController;
+                                    var availableProps = controller.getAvailableMediaStreamProperties(mediaStreamType);
+                                    availableProps.forEach(function (prop, index) {
+                                        if (prop.height == targetResolutionHeight && prop.frameRate.numerator == 30) {
+                                            controller.setMediaStreamPropertiesAsync(mediaStreamType, availableProps[index]);
+                                            return;
+                                        }
+                                    });
+
+                                    props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
+
                                     mediaCapture.addVideoEffectAsync(effectDefinition, mediaStreamType).done(
                                         function complete(result) {
                                             effect = result;
@@ -160,10 +162,16 @@
                 if (!inPreview) {
                     displayRequest.requestActive();
                     var preview = document.getElementById("cameraPreview");
+                    var width = props.width;
+                    var height = props.height;
+                    video.style.width = preview.style.width = width + "px";
+                    video.style.height = preview.style.height = height + "px";
+                    facesCanvas.width = width;
+                    facesCanvas.height = height;
+                    preview.addEventListener("playing", handlePreview);
 
                     if (mirroring) {
                         preview.style.transform = "scale(-1, 1)";
-                        preview.addEventListener("playing", mirrorPreview);
                     }
 
                     var previewUrl = URL.createObjectURL(mediaCapture);
@@ -176,6 +184,7 @@
                 if (inPreview) {
                     facesCanvas.getContext("2d").clearRect(0, 0, facesCanvas.width, facesCanvas.height);
                     var preview = document.getElementById("cameraPreview");
+                    video.style.width = video.style.height = preview.style.width = preview.style.height = facesCanvas.width = facesCanvas.height = 0;
                     preview.pause();
                     preview.src = null;
                     displayRequest.requestRelease();
@@ -187,33 +196,35 @@
                     showPreview = false;
                 }
 
-                var Storage = Windows.Storage;
-                var stream = new Storage.Streams.InMemoryRandomAccessStream();
-                mediaCapture.capturePhotoToStreamAsync(Windows.Media.MediaProperties.ImageEncodingProperties.createJpeg(), stream)
-                .then(function () {
-                    var buffer = new Storage.Streams.Buffer(stream.size);
-                    stream.seek(0);
-                    stream.readAsync(buffer, stream.size, 0).done(function () {
-                        var dataReader = Storage.Streams.DataReader.fromBuffer(buffer);
-                        var byteArray = new Uint8Array(buffer.length);
-                        dataReader.readBytes(byteArray);
+                if (mediaCapture) {
+                    var Storage = Windows.Storage;
+                    var stream = new Storage.Streams.InMemoryRandomAccessStream();
+                    mediaCapture.capturePhotoToStreamAsync(Windows.Media.MediaProperties.ImageEncodingProperties.createJpeg(), stream)
+                    .then(function () {
+                        var buffer = new Storage.Streams.Buffer(stream.size);
+                        stream.seek(0);
+                        stream.readAsync(buffer, stream.size, 0).done(function () {
+                            var dataReader = Storage.Streams.DataReader.fromBuffer(buffer);
+                            var byteArray = new Uint8Array(buffer.length);
+                            dataReader.readBytes(byteArray);
 
-                        if (showPreview) {
-                            var base64 = Uint8ToBase64(byteArray);
-                            var img = document.createElement("img");
-                            img.src = "data: image/jpeg;base64," + base64;
+                            if (showPreview) {
+                                var base64 = Uint8ToBase64(byteArray);
+                                var img = document.createElement("img");
+                                img.src = "data: image/jpeg;base64," + base64;
 
-                            if (mirroring) {
-                                img.style.transform = "scale(-1, 1)";
+                                if (mirroring) {
+                                    img.style.transform = "scale(-1, 1)";
+                                }
+
+                                clearSnapshot();
+                                snapshot.appendChild(img);
                             }
 
-                            clearSnapshot();
-                            snapshot.appendChild(img);
-                        }
-
-                        return byteArray;
+                            return byteArray;
+                        });
                     });
-                });
+                }
             }
         }
     })();
