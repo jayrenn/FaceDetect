@@ -18,12 +18,14 @@
         var mediaStreamType = Capture.MediaStreamType.videoPreview;
         var inPreview = false;
 
+        // Remove any previous snapshots
         function clearSnapshot() {
             while (snapshot.hasChildNodes()) {
                 snapshot.removeChild(snapshot.lastChild);
             }
         }
 
+        // Use the first camera available
         function findCameraDeviceByPanelAsync(panel) {
             return DeviceEnumeration.DeviceInformation.findAllAsync(DeviceEnumeration.DeviceClass.videoCapture).then(
                 function (devices) {
@@ -32,6 +34,7 @@
             );
         }
 
+        // Draw faceboxes for each detected face
         function handleFaces(args) {
             if (inPreview) {
                 var context = facesCanvas.getContext("2d");
@@ -58,6 +61,7 @@
             }
         }
 
+        // Mirror the video
         function handlePreview() {
             if (mirroring) {
                 props.properties.insert("C380465D-2271-428C-9B83-ECEA3B4A85C1", 0);
@@ -65,6 +69,7 @@
             }
         }
 
+        // Convert binary to base64
         function Uint8ToBase64(u8Arr) {
             var CHUNK_SIZE = 0x8000;
             var index = 0;
@@ -80,6 +85,7 @@
         }
 
         return {
+            // Begin face detection
             startDetection: function (withPreview) {
                 if (typeof withPreview == "undefined") {
                     withPreview = true;
@@ -103,8 +109,11 @@
                             mediaCapture = new Capture.MediaCapture();
                             captureSettings.videoDeviceId = camera.id;
                             captureSettings.streamingCaptureMode = Capture.StreamingCaptureMode.video;
+
+                            // Initialize the camera
                             mediaCapture.initializeAsync(captureSettings).then(
                                 function fulfilled(result) {
+                                    // Attempt to use the target camera settings
                                     var controller = mediaCapture.videoDeviceController;
                                     var availableProps = controller.getAvailableMediaStreamProperties(mediaStreamType);
                                     availableProps.forEach(function (prop) {
@@ -113,7 +122,11 @@
                                             return;
                                         }
                                     });
+
+                                    // Get the current camera settings
                                     props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
+
+                                    // Add the face detection video effect
                                     mediaCapture.addVideoEffectAsync(effectDefinition, mediaStreamType).done(
                                         function complete(result) {
                                             effect = result;
@@ -140,6 +153,7 @@
                     );
                 }
             },
+            // End face detection
             stopDetection: function () {
                 effect.removeEventListener("facedetected", handleFaces);
                 facesCanvas.getContext("2d").clearRect(0, 0, facesCanvas.width, facesCanvas.height);
@@ -156,10 +170,13 @@
                 mediaCapture = null;
                 clearSnapshot();
             },
+            // Show the video preview
             startPreview: function () {
                 if (!inPreview) {
                     displayRequest.requestActive();
                     var preview = document.getElementById("cameraPreview");
+
+                    // Size the video and canvas elements to match the camera resolution
                     var width = props.width;
                     var height = props.height;
                     video.style.width = preview.style.width = width + "px";
@@ -178,6 +195,7 @@
                     inPreview = true;
                 }
             },
+            // Hide the video preview
             stopPreview: function () {
                 if (inPreview) {
                     facesCanvas.getContext("2d").clearRect(0, 0, facesCanvas.width, facesCanvas.height);
@@ -189,6 +207,7 @@
                     inPreview = false;
                 }
             },
+            // Take a photo using the video stream
             takePhoto: function () {
                 if (mediaCapture) {
                     var Storage = Windows.Storage;
