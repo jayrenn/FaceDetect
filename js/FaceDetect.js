@@ -113,16 +113,14 @@
                                             return;
                                         }
                                     });
-
                                     props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
-
                                     mediaCapture.addVideoEffectAsync(effectDefinition, mediaStreamType).done(
                                         function complete(result) {
                                             effect = result;
                                             effect.addEventListener("facedetected", handleFaces);
                                             effect.desiredDetectionInterval = detectionInterval;
                                             buttonTakePhoto.addEventListener("click", function () {
-                                                that.takePhoto(true);
+                                                that.takePhoto();
                                             });
                                         },
                                         function error(e) {
@@ -191,11 +189,7 @@
                     inPreview = false;
                 }
             },
-            takePhoto: function (showPreview) {
-                if (!showPreview) {
-                    showPreview = false;
-                }
-
+            takePhoto: function () {
                 if (mediaCapture) {
                     var Storage = Windows.Storage;
                     var stream = new Storage.Streams.InMemoryRandomAccessStream();
@@ -207,21 +201,16 @@
                             var dataReader = Storage.Streams.DataReader.fromBuffer(buffer);
                             var byteArray = new Uint8Array(buffer.length);
                             dataReader.readBytes(byteArray);
+                            var base64 = Uint8ToBase64(byteArray);
+                            var img = document.createElement("img");
+                            img.src = "data: image/jpeg;base64," + base64;
 
-                            if (showPreview) {
-                                var base64 = Uint8ToBase64(byteArray);
-                                var img = document.createElement("img");
-                                img.src = "data: image/jpeg;base64," + base64;
-
-                                if (mirroring) {
-                                    img.style.transform = "scale(-1, 1)";
-                                }
-
-                                clearSnapshot();
-                                snapshot.appendChild(img);
+                            if (mirroring) {
+                                img.style.transform = "scale(-1, 1)";
                             }
 
-                            return byteArray;
+                            clearSnapshot();
+                            snapshot.appendChild(img);
                         });
                     });
                 }
