@@ -7,7 +7,6 @@
         var faceboxColors = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e67e22"]; // Hex color values for each facebox; will cycle if there are more faceboxes than colors.
         var mirroring = true; // If true, video preview will show you as you see yourself in the mirror.
         var targetResolutionHeight = 480; // Height of target video resolution (e.g. 480, 720, 1080) at 30fps. Will fall back to device default if target setting not found.
-        var targetFrameRateNumerator = 30; // Numerator of the frame rate (e.g. 30:1).
 
         // Initializations
         var buttonTakePhoto, mediaCapture, facesCanvas, video, snapshot, effect, props;
@@ -18,30 +17,6 @@
         var effectDefinition = new Windows.Media.Core.FaceDetectionEffectDefinition();
         var mediaStreamType = Capture.MediaStreamType.videoPreview;
         var inPreview = false;
-
-        // Add the face detection video effect
-        function addDetection(that, withPreview) {
-            // Get the current camera settings
-            props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
-
-            mediaCapture.addVideoEffectAsync(effectDefinition, mediaStreamType).done(
-                function complete(result) {
-                    effect = result;
-                    effect.addEventListener("facedetected", handleFaces);
-                    effect.desiredDetectionInterval = detectionInterval;
-                    buttonTakePhoto.addEventListener("click", function () {
-                        that.takePhoto();
-                    });
-                },
-                function error(e) {
-                    console.error(e);
-                }
-            );
-
-            if (withPreview) {
-                that.startPreview();
-            }
-        }
 
         // Remove any previous snapshots
         function clearSnapshot() {
@@ -141,19 +116,33 @@
                                     // Attempt to use the target camera settings
                                     var controller = mediaCapture.videoDeviceController;
                                     var availableProps = controller.getAvailableMediaStreamProperties(mediaStreamType);
-                                    var foundProp = false;
                                     availableProps.forEach(function (prop) {
-                                        if (prop.height == targetResolutionHeight && prop.frameRate.numerator == targetFrameRateNumerator) {
-                                            foundProp = true;
-                                            controller.setMediaStreamPropertiesAsync(mediaStreamType, prop).done(function () {
-                                                addDetection(that, withPreview);
-                                            });
+                                        if (prop.height == targetResolutionHeight && prop.frameRate.numerator == 30) {
+                                            controller.setMediaStreamPropertiesAsync(mediaStreamType, prop);
                                             return;
                                         }
                                     });
 
-                                    if (!foundProp) {
-                                        addDetection(that, withPreview);
+                                    // Get the current camera settings
+                                    props = mediaCapture.videoDeviceController.getMediaStreamProperties(mediaStreamType);
+
+                                    // Add the face detection video effect
+                                    mediaCapture.addVideoEffectAsync(effectDefinition, mediaStreamType).done(
+                                        function complete(result) {
+                                            effect = result;
+                                            effect.addEventListener("facedetected", handleFaces);
+                                            effect.desiredDetectionInterval = detectionInterval;
+                                            buttonTakePhoto.addEventListener("click", function () {
+                                                that.takePhoto();
+                                            });
+                                        },
+                                        function error(e) {
+                                            console.error(e);
+                                        }
+                                    );
+
+                                    if (withPreview) {
+                                        that.startPreview();
                                     }
                                 },
                                 function error(e) {
